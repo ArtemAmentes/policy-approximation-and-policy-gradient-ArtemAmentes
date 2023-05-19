@@ -1,9 +1,9 @@
 import os
 import time
 
-from hw1.cds_rl.infrastructure.rl_trainer import RL_Trainer
-from hw1.cds_rl.agents.bc_agent import BCAgent
-from hw1.cds_rl.policies.loaded_gaussian_policy import LoadedGaussianPolicy
+from cds_rl.infrastructure.rl_trainer import RL_Trainer
+from cds_rl.agents.bc_agent import BCAgent
+from cds_rl.policies.loaded_gaussian_policy import LoadedGaussianPolicy
 
 
 class BC_Trainer(object):

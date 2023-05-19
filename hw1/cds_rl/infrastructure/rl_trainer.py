@@ -5,9 +5,9 @@ import time
 import gym
 import torch
 
-from hw1.cds_rl.infrastructure import pytorch_util as ptu
-from hw1.cds_rl.infrastructure.logger import Logger
-from hw1.cds_rl.infrastructure import utils
+from cds_rl.infrastructure import pytorch_util as ptu
+from cds_rl.infrastructure.logger import Logger
+from cds_rl.infrastructure import utils
 
 # how many rollouts to save as videos to tensorboard
 MAX_NVIDEO = 2
@@ -165,7 +165,15 @@ class RL_Trainer(object):
         # HINT1: use sample_trajectories from utils
         # HINT2: you want each of these collected rollouts to be of length self.params['ep_len']
         print("\nCollecting data to be used for training...")
-        paths, envsteps_this_batch = TODO
+        if itr == 0:
+            with open(load_initial_expertdata, 'rb') as f:
+                paths = pickle.load(f)
+            # paths, envsteps_this_batch = utils.sample_trajectories(self.env, expert_policy, 2000, self.params['ep_len'])
+            envsteps_this_batch = 0
+        else:
+            paths, envsteps_this_batch = utils.sample_trajectories(self.env, collect_policy, batch_size,
+                                                                   self.params['ep_len'])
+
 
         # collect more rollouts with the same policy, to be saved as videos in tensorboard
         # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
@@ -185,12 +193,12 @@ class RL_Trainer(object):
             # TODO sample some data from the data buffer
             # HINT1: use the agent's sample function
             # HINT2: how much data = self.params['train_batch_size']
-            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = TODO
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['train_batch_size'])
 
             # TODO use the sampled data to train an agent
             # HINT: use the agent's train function
             # HINT: keep the agent's training log for debugging
-            train_log = TODO
+            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
             all_logs.append(train_log)
         return all_logs
 
