@@ -5,9 +5,9 @@ import time
 import gym
 import torch
 
-from cds_rl.infrastructure import pytorch_util as ptu
-from cds_rl.infrastructure.logger import Logger
-from cds_rl.infrastructure import utils
+from hw1.cds_rl.infrastructure import pytorch_util as ptu
+from hw1.cds_rl.infrastructure.logger import Logger
+from hw1.cds_rl.infrastructure import utils
 
 # how many rollouts to save as videos to tensorboard
 MAX_NVIDEO = 2

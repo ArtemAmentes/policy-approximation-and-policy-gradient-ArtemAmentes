@@ -1,6 +1,6 @@
-from cds_rl.infrastructure.replay_buffer import ReplayBuffer
-from cds_rl.policies.MLP_policy import MLPPolicySL
-from .base_agent import BaseAgent
+from hw1.cds_rl.infrastructure.replay_buffer import ReplayBuffer
+from hw1.cds_rl.policies.MLP_policy import MLPPolicySL
+from hw1.cds_rl.agents.base_agent import BaseAgent
 
 
 class BCAgent(BaseAgent):

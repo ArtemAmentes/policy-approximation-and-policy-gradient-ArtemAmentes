@@ -1,3 +1,4 @@
+
 # Full guide is here: https://github.com/geyang/jaynes-starter-kit/blob/2fb0864ae10e1a52b15b592393738c6f2ff839cc/docker/m1_mac_mujoco_setup.md
 # Check and fulfill the prerequisites, then run this shell script
 
