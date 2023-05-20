@@ -4,7 +4,8 @@ import io
 
 from IPython import display as ipythondisplay
 from IPython.display import HTML
-from gym.wrappers import Monitor
+# from gym.wrappers import Monitor
+from gym.wrappers.record_video import RecordVideo
 
 
 ## modified from https://colab.research.google.com/drive/1flu31ulJlgiRL1dnN2ir8wGh9p7Zij2t#scrollTo=TCelFzWY9MBI
@@ -27,5 +28,6 @@ def show_video():
 
 
 def wrap_env(env):
-    env = Monitor(env, '/content/video', force=True)
+    env = RecordVideo(env, '/content/video', episode_trigger=lambda episode_number: True)
+
     return env

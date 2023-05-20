@@ -13,18 +13,17 @@ from hw2.policies.base_policy import BasePolicy
 
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
-    def __init__(
-            self,
-            ac_dim,
-            ob_dim,
-            n_layers,
-            size,
-            discrete=False,
-            learning_rate=1e-4,
-            training=True,
-            nn_baseline=False,
-            **kwargs
-    ):
+    def __init__(self,
+                 ac_dim,
+                 ob_dim,
+                 n_layers,
+                 size,
+                 discrete=False,
+                 learning_rate=1e-4,
+                 training=True,
+                 nn_baseline=False,
+                 **kwargs
+                 ):
         super().__init__(**kwargs)
 
         # init vars
@@ -38,26 +37,20 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         self.nn_baseline = nn_baseline
 
         if self.discrete:
-            self.logits_na = ptu.build_mlp(
-                input_size=self.ob_dim,
-                output_size=self.ac_dim,
-                n_layers=self.n_layers,
-                size=self.size
-            )
+            self.logits_na = ptu.build_mlp(input_size=self.ob_dim,
+                                           output_size=self.ac_dim,
+                                           n_layers=self.n_layers,
+                                           size=self.size)
             self.logits_na.to(ptu.device)
             self.mean_net = None
             self.logstd = None
-            self.optimizer = optim.Adam(
-                self.logits_na.parameters(), self.learning_rate
-            )
+            self.optimizer = optim.Adam(self.logits_na.parameters(),
+                                        self.learning_rate)
         else:
             self.logits_na = None
-            self.mean_net = ptu.build_mlp(
-                input_size=self.ob_dim,
-                output_size=self.ac_dim,
-                n_layers=self.n_layers,
-                size=self.size
-            )
+            self.mean_net = ptu.build_mlp(input_size=self.ob_dim,
+                                          output_size=self.ac_dim,
+                                          n_layers=self.n_layers, size=self.size)
             self.logstd = nn.Parameter(
                 torch.zeros(self.ac_dim, dtype=torch.float32, device=ptu.device)
             )
@@ -92,7 +85,20 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
     # query the policy with observation(s) to get selected action(s)
     def get_action(self, obs: np.ndarray) -> np.ndarray:
-        # TODO: get this from HW1
+        # TODO: get this from hw1
+        if len(obs.shape) > 1:
+            observation = obs
+        else:
+            observation = obs[None]
+
+        # TODO return the action that the policy prescribes
+
+        if self.discrete:
+            action = self(ptu.from_numpy(observation)).sample()
+        else:
+            action = self(ptu.from_numpy(observation)).rsample()
+
+        return ptu.to_numpy(action)
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
@@ -104,27 +110,24 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
     def forward(self, observation: torch.FloatTensor):
+        # TODO: get this from hw1
         if self.discrete:
-            logits = self.logits_na(observation)
-            action_distribution = distributions.Categorical(logits=logits)
-            return action_distribution
+            action_distribution = distributions.Categorical(logits=self.logits_na(observation))
         else:
-            batch_mean = self.mean_net(observation)
+            mean = self.mean_net(observation)
             scale_tril = torch.diag(torch.exp(self.logstd))
-            batch_dim = batch_mean.shape[0]
+            batch_dim = mean.shape[0]
             batch_scale_tril = scale_tril.repeat(batch_dim, 1, 1)
-            action_distribution = distributions.MultivariateNormal(
-                batch_mean,
-                scale_tril=batch_scale_tril,
-            )
-            return action_distribution
+            action_distribution = distributions.MultivariateNormal(loc=mean, scale_tril=batch_scale_tril)
+
+        return action_distribution
+
 
 #####################################################
 #####################################################
 
 class MLPPolicyPG(MLPPolicy):
     def __init__(self, ac_dim, ob_dim, n_layers, size, **kwargs):
-
         super().__init__(ac_dim, ob_dim, n_layers, size, **kwargs)
         self.baseline_loss = nn.MSELoss()
 
@@ -133,45 +136,62 @@ class MLPPolicyPG(MLPPolicy):
         actions = ptu.from_numpy(actions)
         advantages = ptu.from_numpy(advantages)
 
-        # TODO: update the policy using policy gradient
+        # TODO: compute the loss that should be optimized when training with policy gradient
         # HINT1: Recall that the expression that we want to MAXIMIZE
-            # is the expectation over collected trajectories of:
-            # sum_{t=0}^{T-1} [grad [log pi(a_t|s_t) * (Q_t - b_t)]]
+        # is the expectation over collected trajectories of:
+        # sum_{t=0}^{T-1} [grad [log pi(a_t|s_t) * (Q_t - b_t)]]
         # HINT2: you will want to use the `log_prob` method on the distribution returned
-            # by the `forward` method
+        # by the `forward` method
         # HINT3: don't forget that `optimizer.step()` MINIMIZES a loss
-        # HINT4: use self.optimizer to optimize the loss. Remember to
-            # 'zero_grad' first
 
-        TODO
+        log_probs = self(observations).log_prob(actions)
+        loss = -1 * torch.sum(log_probs * advantages)
+
+        # TODO: optimize `loss` using `self.optimizer`
+        # HINT: remember to `zero_grad` first
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         if self.nn_baseline:
-            ## TODO: update the neural network baseline using the q_values as
-            ## targets. The q_values should first be normalized to have a mean
-            ## of zero and a standard deviation of one.
+            ## TODO: normalize the q_values to have a mean of zero and a standard deviation of one
+            ## HINT: there is a `normalize` function in `infrastructure.utils`
+            targets = normalize(q_values, np.mean(q_values), np.std(q_values))
+            targets = ptu.from_numpy(targets)
 
-            ## HINT1: use self.baseline_optimizer to optimize the loss used for
-                ## updating the baseline. Remember to 'zero_grad' first
-            ## HINT2: You will need to convert the targets into a tensor using
-                ## ptu.from_numpy before using it in the loss
+            ## TODO: use the `forward` method of `self.baseline` to get baseline predictions
+            baseline_predictions = torch.squeeze(self.baseline(observations))
 
-            TODO
+            ## avoid any subtle broadcasting bugs that can arise when dealing with arrays of shape
+            ## [ N ] versus shape [ N x 1 ]
+            ## HINT: you can use `squeeze` on torch tensors to remove dimensions of size 1
+            assert baseline_predictions.shape == targets.shape
+
+            # TODO: compute the loss that should be optimized for training the baseline MLP (`self.baseline`)
+            # HINT: use `F.mse_loss`
+            baseline_loss = self.baseline_loss(baseline_predictions, targets)
+
+            # TODO: optimize `baseline_loss` using `self.baseline_optimizer`
+            # HINT: remember to `zero_grad` first
+            self.baseline_optimizer.zero_grad()
+            baseline_loss.backward()
+            self.baseline_optimizer.step()
 
         train_log = {
             'Training Loss': ptu.to_numpy(loss),
         }
         return train_log
 
-    def run_baseline_prediction(self, observations):
+    def run_baseline_prediction(self, obs):
         """
-            Helper function that converts `observations` to a tensor,
+            Helper function that converts `obs` to a tensor,
             calls the forward method of the baseline MLP,
             and returns a np array
 
-            Input: `observations`: np.ndarray of size [N, 1]
+            Input: `obs`: np.ndarray of size [N, 1]
             Output: np.ndarray of size [N]
 
         """
-        observations = ptu.from_numpy(observations)
-        pred = self.baseline(observations)
-        return ptu.to_numpy(pred.squeeze())
+        obs = ptu.from_numpy(obs)
+        predictions = self.baseline(obs)
+        return ptu.to_numpy(predictions)[:, 0]

@@ -44,10 +44,6 @@ class RL_Trainer(object):
         self.env = gym.make(self.params['env_name'])
         self.env.seed(seed)
 
-        # Add noise wrapper
-        if params['action_noise_std'] > 0:
-            self.env = ActionNoiseWrapper(self.env, seed, params['action_noise_std'])
-
         # import plotting (locally if 'obstacles' env)
         if not(self.params['env_name']=='obstacles-cs285-v0'):
             import matplotlib
@@ -115,6 +111,7 @@ class RL_Trainer(object):
                 self.logvideo = True
             else:
                 self.logvideo = False
+            self.log_video = self.logvideo
 
             # decide if metrics should be logged
             if self.params['scalar_log_freq'] == -1:
@@ -125,9 +122,9 @@ class RL_Trainer(object):
                 self.logmetrics = False
 
             # collect trajectories, to be used for training
-            training_returns = self.collect_training_trajectories(
-                itr, initial_expertdata, collect_policy, self.params['batch_size']
-            )
+            training_returns = self.collect_training_trajectories(itr,
+                                initial_expertdata, collect_policy,
+                                self.params['batch_size'])
             paths, envsteps_this_batch, train_video_paths = training_returns
             self.total_envsteps += envsteps_this_batch
 
@@ -149,11 +146,43 @@ class RL_Trainer(object):
     ####################################
     ####################################
 
-    def collect_training_trajectories(self, itr, initial_expertdata, collect_policy, batch_size):
-        # TODO: GETTHIS from HW1
+    def collect_training_trajectories(self, itr, load_initial_expertdata, collect_policy, batch_size):
+        # TODO: get this from hw1
+        # if your load_initial_expertdata is None, then you need to collect new trajectories at *every* iteration
+        if itr == 0 and load_initial_expertdata is not None:
+            with open(load_initial_expertdata, 'rb') as f:
+                paths = pickle.load(f)
+            envsteps_this_batch = 0
+        else:
+            paths, envsteps_this_batch = utils.sample_trajectories(self.env, collect_policy, batch_size, self.params['ep_len'])
+
+        # collect more rollouts with the same policy, to be saved as videos in tensorboard
+        # note: here, we collect MAX_NVIDEO rollouts, each of length MAX_VIDEO_LEN
+        train_video_paths = None
+        if self.log_video:
+            print('\nCollecting train rollouts to be used for saving videos...')
+            ## TODO look in utils and implement sample_n_trajectories
+            train_video_paths = utils.sample_n_trajectories(self.env, collect_policy, MAX_NVIDEO, MAX_VIDEO_LEN, True)
+
+        return paths, envsteps_this_batch, train_video_paths
 
     def train_agent(self):
-        # TODO: GETTHIS from HW1
+        # TODO: get this from hw1
+        print('\nTraining agent using sampled data from replay buffer...')
+        train_logs = []
+        for train_step in range(self.params['num_agent_train_steps_per_iter']):
+
+            # TODO sample some data from the data buffer
+            # HINT1: use the agent's sample function
+            # HINT2: how much data = self.params['train_batch_size']
+            ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch = self.agent.sample(self.params['train_batch_size'])
+
+            # TODO use the sampled data to train an agent
+            # HINT: use the agent's train function
+            # HINT: keep the agent's training log for debugging
+            train_log = self.agent.train(ob_batch, ac_batch, re_batch, next_ob_batch, terminal_batch)
+            train_logs.append(train_log)
+        return train_logs
 
     ####################################
     ####################################
