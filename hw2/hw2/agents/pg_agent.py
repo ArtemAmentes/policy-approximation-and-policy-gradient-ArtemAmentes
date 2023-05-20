@@ -3,11 +3,11 @@ import numpy as np
 from hw2.agents.base_agent import BaseAgent
 from hw2.policies.MLP_policy import MLPPolicyPG
 from hw2.infrastructure.replay_buffer import ReplayBuffer
-
+from hw2.infrastructure.utils import *
 
 class PGAgent(BaseAgent):
     def __init__(self, env, agent_params):
-        super(PGAgent, self).__init__()
+        super().__init__()
 
         # init vars
         self.env = env

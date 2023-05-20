@@ -9,7 +9,7 @@ from torch import optim
 
 from hw2.infrastructure import pytorch_util as ptu
 from hw2.policies.base_policy import BasePolicy
-
+from hw2.infrastructure.utils import *
 
 class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 
